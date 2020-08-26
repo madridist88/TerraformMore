@@ -1,0 +1,67 @@
+provider "google" {
+  version = "1.4.0"
+  project = "infra-208405"
+  region  = "europe-west1"
+}
+resource "google_compute_instance" "app" {
+  name         = "reddit-app-terraform"
+  machine_type = "g1-small"
+  zone         = "europe-west1-b"
+  boot_disk {
+    initialize_params {
+      image = "reddit-full"
+    }
+  }
+
+metadata {
+    ssh-keys = "alex:${file("~/.ssh/alex.pub")}"
+  }
+
+tags = ["reddit-app"]
+network_interface {
+ network = "default"
+ access_config {}
+  }
+
+ metadata { 
+   ssh-keys = "alex:${file("~/.ssh/alex.pub")}" 
+ } 
+}
+
+connection {
+    type        = "ssh"
+    user        = "alex"
+    agent       = false
+    # private_key = "${file("~/.ssh/alex")}"
+    private_key = "${file(var.private_key_path)}"  
+}
+
+provisioner "file" {
+    source      = "files/puma.service"
+    destination = "/tmp/puma.service"
+  }
+
+provisioner "remote-exec" {
+    script = "/files/deploy.sh"
+  }
+
+
+resource "google_compute_firewall" "firewall-puma" {
+  name = "allow-puma-default2"
+  network = "default"
+
+  allow {
+    protocol = "tcp"
+    ports    = ["9292"]
+  }
+source_ranges = ["0.0.0.0/0"]
+target_tags = ["reddit-app"]
+}
+
+
+
+
+
+
+
+
